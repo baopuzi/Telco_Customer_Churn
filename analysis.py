@@ -1,40 +1,14 @@
-背景 
-提出问题 
-理解数据 
-数据清洗 
-可视化分析 
-用户流失预测 
-结论和建议
-背景
-关于用户留存有这样一个观点，如果将用户流失率降低5%，公司利润将提升25%-85%。如今高居不下的获客成本让电信运营商遭遇“天花板”，甚至陷入获客难的窘境。随着市场饱和度上升，电信运营商亟待解决增加用户黏性，延长用户生命周期的问题。因此，电信用户流失分析与预测至关重要。
-数据集来自kaggle。
-提出问题
-分析用户特征与流失的关系。
-从整体情况看，流失用户的普遍具有哪些特征？
-尝试找到合适的模型预测流失用户。
-针对性给出增加用户黏性、预防流失的建议。
-理解数据
-根据介绍，该数据集有21个字段，共7043条记录。每条记录包含了唯一客户的特征。
-
-利用Jupyter Notebook工具，采用Python结合matplotlib、seaborn、sklearn等工具包进行进行用户流失可视化分析和预测。
-数据清洗
-数据清洗的“完全合一”规则 ：
-1. 完整性：单条数据是否存在空值，统计的字段是否完善。
-2. 全面性：观察某一列的全部数值，通过常识来判断该列是否有问题，比如：数据定义、单位标识、数据本身。 
-3. 合法性：数据的类型、内容、大小的合法性。比如数据中是否存在非ASCII字符，性别存在了未知，年龄超过了150等。 
-4. 唯一性：数据是否存在重复记录，因为数据通常来自不同渠道的汇总，重复的情况是常见的。行数据、列数据都需要是唯一的。
-导入工具包。
 #!/user/bin/env python 3
 import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
 import seaborn as sns
-导入数据集文件。
+# 导入数据集文件。
 # 使用open方法可以在路径中包含中文
 f=open('C:/Users/MQ/Desktop/电信客户流失数据/WA_Fn-UseC_-Telco-Customer-Churn.csv')
 customerDf=pd.read_csv(f)
 
-查看数据集信息，查看数据集大小，并初步观察前10条的数据内容。
+# 查看数据集信息，查看数据集大小，并初步观察前10条的数据内容。
 # 查看数据集大小
 customerDf.shape
 # 运行结果：(7043, 21)
@@ -44,19 +18,19 @@ pd.set_option('display.max_columns',None)
 
 # 查看前10条数据
 customerDf.head(10)
-查看数据是否存在Null，没有发现。
+# 查看数据是否存在Null，没有发现。
 # Null计数
 pd.isnull(customerDf).sum()
 
-查看数据类型，根据一般经验，发现‘TotalCharges’总消费额的数据类型为字符串，应该转换为浮点型数据。
+# 查看数据类型，根据一般经验，发现‘TotalCharges’总消费额的数据类型为字符串，应该转换为浮点型数据。
 # 查看数据类型
 customerDf.info()
 #customerDf.dtypes
 
-将‘TotalCharges’总消费额的数据类型转换为浮点型，发现错误：字符串无法转换为数字。
-#customerDf[['TotalCharges']].astype(float)
+# 将‘TotalCharges’总消费额的数据类型转换为浮点型，发现错误：字符串无法转换为数字。
+customerDf[['TotalCharges']].astype(float)
 #ValueError: could not convert string to float: 
-依次检查各个字段的数据类型、字段内容和数量。最后发现“TotalCharges”（总消费额）列有11个用户数据缺失。
+# 依次检查各个字段的数据类型、字段内容和数量。最后发现“TotalCharges”（总消费额）列有11个用户数据缺失。
 # 查看每一列数据取值
 for x in customerDf.columns:
     test=customerDf.loc[:,x].value_counts()
@@ -64,42 +38,40 @@ for x in customerDf.columns:
     print('{0} 的数据类型是：{1}'.format(x,customerDf[x].dtypes))
     print('{0} 的内容是：\n{1}\n'.format(x,test))
 
-采用强制转换，将“TotalCharges”（总消费额）转换为浮点型数据。
-#强制转换为数字，不可转换的变为NaN
+# 采用强制转换，将“TotalCharges”（总消费额）转换为浮点型数据。
+# 强制转换为数字，不可转换的变为NaN
 customerDf['TotalCharges']=customerDf['TotalCharges'].convert_objects(convert_numeric=True)
-转换后发现“TotalCharges”（总消费额）列有11个用户数据缺失，为NaN。
+# 转换后发现“TotalCharges”（总消费额）列有11个用户数据缺失，为NaN。
 test=customerDf.loc[:,'TotalCharges'].value_counts().sort_index()
 print(test.sum())
-运行结果：7032
+# 运行结果：7032
 
 pd.isnull(customerDf['TotalCharges']).sum()
-运行结果：11
-经过观察，发现这11个用户‘tenure’（入网时长）为0个月，推测是当月新入网用户。根据一般经验，用户即使在注册的当月流失，也需缴纳当月费用。因此将这11个用户入网时长改为1，将总消费额填充为月消费额，符合实际情况。
+# 运行结果：11
+# 经过观察，发现这11个用户‘tenure’（入网时长）为0个月，推测是当月新入网用户。根据一般经验，用户即使在注册的当月流失，也需缴纳当月费用。因此将这11个用户入网时长改为1，将总消费额填充为月消费额，符合实际情况。
 print(customerDf.isnull().any())
 print(customerDf[customerDf['TotalCharges']!=customerDf['TotalCharges']][['tenure','MonthlyCharges','TotalCharges']])
 
 
-#将总消费额填充为月消费额
+# 将总消费额填充为月消费额
 customerDf.loc[:,'TotalCharges'].replace(to_replace=np.nan,value=customerDf.loc[:,'MonthlyCharges'],inplace=True)
-#查看是否替换成功
+# 查看是否替换成功
 print(customerDf[customerDf['tenure']==0][['tenure','MonthlyCharges','TotalCharges']])
 
 # 将‘tenure’入网时长从0修改为1
 customerDf.loc[:,'tenure'].replace(to_replace=0,value=1,inplace=True)
 print(pd.isnull(customerDf['TotalCharges']).sum())
 print(customerDf['TotalCharges'].dtypes)
-运行结果：
-0
-float64
-查看数据的描述统计信息，根据一般经验，所有数据正常。
+# 运行结果：0 float64
+# 查看数据的描述统计信息，根据一般经验，所有数据正常。
 # 获取数据类型的描述统计信息
 customerDf.describe()
 
-可视化分析
-根据一般经验，将用户特征划分为用户属性、服务属性、合同属性，并从这三个维度进行可视化分析。
+# 可视化分析
+# 根据一般经验，将用户特征划分为用户属性、服务属性、合同属性，并从这三个维度进行可视化分析。
 
-查看流失用户数量和占比。
-#保存图片自定义函数
+# 查看流失用户数量和占比。
+# 保存图片自定义函数
 def savePic(name):
 #bounding box_inches(边框英寸)设置，保存的图片去掉周围空白
     plt.savefig('C:/Users/MQ/Desktop/电信客户流失数据/图片/{0}.png'.format(name), dpi=600,bbox_inches='tight')
@@ -116,7 +88,7 @@ x=churnDf.index
 y=churnDf['Churn']
 plt.bar(x,y,width = 0.5,color = 'c')
 
-#用来正常显示中文标签（需要安装字库）
+# 用来正常显示中文标签（需要安装字库）
 plt.rcParams['font.sans-serif']=['SimHei'] 
 plt.rcParams.update({'font.size': 18})
 plt.title('Churn(Yes/No) Num')
@@ -125,8 +97,8 @@ for a,b in zip(x,y):
 savePic('Churn(Yes or No) Num')
 plt.show()
 
-属于不平衡数据集，流失用户占比达26.54%。
-（1）用户属性分析
+
+#（1）用户属性分析
 def barplot_percentages(feature,orient='v',axis_name="percentage of customers"):
     ratios = pd.DataFrame()
     g = (customerDf.groupby(feature)["Churn"].value_counts()/len(customerDf)).to_frame()
@@ -157,9 +129,6 @@ plt.rcParams.update({'font.size': 13})
 savePic('Churn(Yes or No) Ratio as gender and SeniorCitizen')
 plt.show()
 
-小结：
-用户流失与性别基本无关；
-年老用户流失占显著高于年轻用户。
 fig, axis = plt.subplots(1, 2, figsize=(12,4))
 axis[0].set_title("Has Partner")
 axis[1].set_title("Has Dependents")
@@ -186,11 +155,11 @@ ax2 = sns.barplot(x='Dependents', y= axis_y, hue='Churn', data=gp_dep, ax=axis[1
 #ax2.set_xlabel('家属')
 
 
-#设置字体大小
+# 设置字体大小
 plt.rcParams.update({'font.size': 20})
 ax2.legend(fontsize=10)
 
-#设置
+# 设置
 savePic('Churn(Yes or No) Ratio as partner and dependents')
 plt.show()
 
@@ -208,13 +177,7 @@ kdeplot('tenure','tenure')
 savePic('Churn(Yes or No) Ratio as tenure kde')
 plt.show()
 
-小结：
-有伴侣的用户流失占比低于无伴侣用户；
-有家属的用户较少；
-有家属的用户流失占比低于无家属用户;
-在网时长越久，流失率越低，符合一般经验；
-在网时间达到三个月，流失率小于在网率，证明用户心理稳定期一般是三个月。
-（2）服务属性分析
+#（2）服务属性分析
 plt.figure(figsize=(9, 4.5))
 barplot_percentages("MultipleLines", orient='h')
 
@@ -245,11 +208,7 @@ plt.title('Num of Churn Customers as Internet Additional Service')
 savePic('Churn Num as Internet Additional Service')
 plt.show()
 
-电话服务整体对用户流失影响较小。
-单光纤用户的流失占比较高；
-光纤用户绑定了安全、备份、保护、技术支持服务的流失率较低；
-光纤用户附加流媒体电视、电影服务的流失率占比较高。
-（3）合同属性分析
+#（3）合同属性分析
 plt.figure(figsize=(9, 4.5))
 barplot_percentages("PaymentMethod",orient='h')
 
@@ -266,24 +225,19 @@ savePic('Churn(Yes or No) Ratio as TotalCharges kde')
 plt.show()
 
 
-小结：
-采用电子支票支付的用户流失率最高，推测该方式的使用体验较为一般；
-签订合同方式对客户流失率影响为：按月签订 > 按一年签订 > 按两年签订，证明长期合同最能保留客户；
-月消费额大约在70-110之间用户流失率较高；
-长期来看，用户总消费越高，流失率越低，符合一般经验。
-通过以上分析，可以得到较高流失率的人群特征，具有这些特征的人群需要对其进行运营，增加用户黏性，延长其生命周期价值。
 
-用户流失预测
-对数据集进一步清洗和提取特征，通过特征选取对数据进行降维，采用机器学习模型应用于测试数据集，然后对构建的分类模型准确性进行分析。
+# 用户流失预测
+# 对数据集进一步清洗和提取特征，通过特征选取对数据进行降维，采用机器学习模型应用于测试数据集，然后对构建的分类模型准确性进行分析。
 （1）数据清洗
 customerID=customerDf['customerID']
 customerDf.drop(['customerID'],axis=1, inplace=True)
-观察数据类型，发现大多除了“tenure”、“MonthlyCharges”、“TotalCharges”是连续特征，其它都是离散特征。对于连续特征，采用标准化方式处理。对于离散特征，特征之间没有大小关系，采用one-hot编码；特征之间有大小关联，则采用数值映射。
-获取离散特征。
+# 观察数据类型，发现大多除了“tenure”、“MonthlyCharges”、“TotalCharges”是连续特征，其它都是离散特征。
+# 对于连续特征，采用标准化方式处理。对于离散特征，特征之间没有大小关系，采用one-hot编码；特征之间有大小关联，则采用数值映射。
+# 获取离散特征。
 cateCols = [c for c in customerDf.columns if customerDf[c].dtype == 'object' or c == 'SeniorCitizen']
 dfCate = customerDf[cateCols].copy()
 dfCate.head(3)
-进行特征编码 。
+# 进行特征编码 
 for col in cateCols:
     if dfCate[col].nunique() == 2:
         dfCate[col] = pd.factorize(dfCate[col])[0]
@@ -292,12 +246,12 @@ for col in cateCols:
 dfCate['tenure']=customerDf[['tenure']]
 dfCate['MonthlyCharges']=customerDf[['MonthlyCharges']]
 dfCate['TotalCharges']=customerDf[['TotalCharges']]
-查看关联关系
+# 查看关联关系
 plt.figure(figsize=(16,8))
 dfCate.corr()['Churn'].sort_values(ascending=False).plot(kind='bar')
 plt.show()
 
-（2）特征选取
+#（2）特征选取
 # 特征选择
 dropFea = ['gender','PhoneService',
            'OnlineSecurity_No internet service', 'OnlineBackup_No internet service',
@@ -308,11 +262,11 @@ dropFea = ['gender','PhoneService',
            #'StreamingTV_No', 'StreamingMovies_No',
            ]
 dfCate.drop(dropFea, inplace=True, axis =1) 
-#最后一列是作为标识
+# 最后一列是作为标识
 target = dfCate['Churn'].values
-#列表：特征和1个标识
+# 列表：特征和1个标识
 columns = dfCate.columns.tolist()
-构造训练数据集和测试数据集。
+# 构造训练数据集和测试数据集。
 # 列表：特征
 columns.remove('Churn')
 # 含有特征的DataFrame
@@ -321,8 +275,8 @@ features = dfCate[columns].values
 # random_state = 1表示重复试验随机得到的数据集始终不变
 # stratify = target 表示按标识的类别，作为训练数据集、测试数据集内部的分配比例
 train_x, test_x, train_y, test_y = train_test_split(features, target, test_size=0.30, stratify = target, random_state = 1)
-（3）构建模型
-构造多个分类器，
+#（3）构建模型
+# 构造多个分类器，
 # 构造各种分类器
 classifiers = [
     SVC(random_state = 1, kernel = 'rbf'),    
@@ -340,7 +294,7 @@ classifier_names = [
             'adaboostclassifier',
 ]
 # 分类器参数
-#注意分类器的参数，字典键的格式，GridSearchCV对调优的参数格式是"分类器名"+"__"+"参数名"
+# 注意分类器的参数，字典键的格式，GridSearchCV对调优的参数格式是"分类器名"+"__"+"参数名"
 classifier_param_grid = [
             {'svc__C':[0.1], 'svc__gamma':[0.01]},
             {'decisiontreeclassifier__max_depth':[6,9,11]},
@@ -348,7 +302,7 @@ classifier_param_grid = [
             {'kneighborsclassifier__n_neighbors':[4,6,8]},
             {'adaboostclassifier__n_estimators':[70,80,90]}
 ]
-（4）模型参数调优和评估
+#（4）模型参数调优和评估
 对分类器进行参数调优和评估，最后得到试用AdaBoostClassifier(n_estimators=80)效果最好。
 # 对具体的分类器进行 GridSearchCV 参数调优
 def GridSearchCV_work(pipeline, train_x, train_y, test_x, test_y, param_grid, score = 'accuracy_score'):
@@ -374,7 +328,8 @@ for model, model_name, model_param_grid in zip(classifiers, classifier_names, cl
     ])
     result = GridSearchCV_work(pipeline, train_x, train_y, test_x, test_y, model_param_grid , score = 'accuracy')
 
-运行结果：
+'''
+# 运行结果：
 GridSearch 最优参数： {'svc__C': 0.1, 'svc__gamma': 0.01}
 GridSearch 最优分数： 0.7884
  准确率 0.7823
@@ -390,8 +345,10 @@ GridSearch 最优分数： 0.7917
 GridSearch 最优参数： {'adaboostclassifier__n_estimators': 80}
 GridSearch 最优分数： 0.8039
  准确率 0.7960
-（5）实施方案
-由于没有预测数据集，选择最后10条数为例进行预测。
+ '''
+ 
+#（5）实施方案
+# 由于没有预测数据集，选择最后10条数为例进行预测。
 # 使用上述得到的最优模型
 model =  AdaBoostClassifier(n_estimators=80)
 model.fit(train_x,train_y)
@@ -408,6 +365,9 @@ pred_y = model.predict(pred_x)
 predDf = pd.DataFrame({'customerID':pred_id, 'Churn':pred_y})
 print(predDf)
 
+
+'''
+https://zhuanlan.zhihu.com/p/68397317
 结论和建议
 根据以上分析，得到高流失率用户的特征：
 用户属性：老年用户，未婚用户，无亲属用户更容易流失；
@@ -419,3 +379,4 @@ print(predDf)
 用户方面：针对老年用户、无亲属、无伴侣用户的特征退出定制服务如亲属套餐、温暖套餐等，一方面加强与其它用户关联度，另一方对特定用户提供个性化服务。
 服务方面：针对新注册用户，推送半年优惠如赠送消费券，以渡过用户流失高峰期。针对光纤用户和附加流媒体电视、电影服务用户，重点在于提升网络体验、增值服务体验，一方面推动技术部门提升网络指标，另一方面对用户承诺免费网络升级和赠送电视、电影等包月服务以提升用户黏性。针对在线安全、在线备份、设备保护、技术支持等增值服务，应重点对用户进行推广介绍，如首月/半年免费体验。
 合同方面：针对单月合同用户，建议推出年合同付费折扣活动，将月合同用户转化为年合同用户，提高用户在网时长，以达到更高的用户留存。 针对采用电子支票支付用户，建议定向推送其它支付方式的优惠券，引导用户改变支付方式。
+'''
